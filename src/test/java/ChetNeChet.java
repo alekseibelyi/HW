@@ -2,7 +2,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class chetNeChet {
+public class ChetNeChet {
    public static Boolean isEven(int n) {
         return n % 2 ==0;
     }
@@ -42,7 +42,7 @@ public static void printAccessResult(int age) {
 }
 }
 
-class bolsheMensheNull {
+class BolsheMensheNull {
     public static boolean isPositive(int m) {
         return m >= 0 ? true : false;
     }
@@ -154,7 +154,7 @@ class Range {
     }
 }
 
-class findMax {
+class FindMax {
     public static  int findMax(int[] arr) {
         int max = arr[0];
 
@@ -170,24 +170,6 @@ class findMax {
         int[] numbers = {0,5,23,-24,4,99};
         System.out.println(findMax(numbers));
     }
-}
-
-class Reverse {
-    public static String[] reverse(String[] arr) {
-        String[] result = new String[arr.length];
-
-        for (int i=0; i < arr.length; i++) {
-            result[i] = arr[arr.length - 1 - i];
-        }
-        return result;
-    }
-    public static void main(String[] args) {
-        String[] words = {"One", "Two", "Zero"};
-        String[] reversed = reverse(words);
-
-        System.out.println(String.join(", ", reversed));
-    }
-
 }
 
 class Average {
