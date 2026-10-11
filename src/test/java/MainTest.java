@@ -1,3 +1,4 @@
+import org.example.Main;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
@@ -10,6 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Stream;
+import org.junit.jupiter.params.provider.Arguments;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -60,8 +62,9 @@ public class MainTest {
     }
 
 
-    // 3. @Test — Range
-    @Test
+    // 3. @Test —  RANGE
+    // 3.1  start <= end
+    @RepeatedTest(10)
     public void testGetEvenInRange() {
         int start = random.nextInt(20) + 1;
         int end = start + random.nextInt(20) + 1;
@@ -77,8 +80,36 @@ public class MainTest {
         System.out.println("getEvenInRange(" + start + ", " + end + ") = \"" + actual
                 + "\", expected = \"" + expected + "\"");
         check(expected.equals(actual));
-        assertEquals(expected, actual);
+        assertEquals(expected, actual,
+                "Ожидалось \"" + expected + "\", получено \"" + actual + "\"");
     }
+
+    // 3.2 start == end
+    @Test
+    public void testGetEvenInRangeSameStartEnd() {
+        int n = random.nextInt(20) + 1;
+        String expected = (n % 2 == 0) ? String.valueOf(n) : "";
+        String actual = Range.getEvenInRange(n, n);
+        System.out.println("getEvenInRange(" + n + ", " + n + ") = \"" + actual
+                + "\", expected = \"" + expected + "\"");
+        check(expected.equals(actual));
+        assertEquals(expected, actual,
+                "Для start == end = " + n + " ожидалось \"" + expected + "\", получено \"" + actual + "\"");
+    }
+
+    // 3.3 start > end
+    @ParameterizedTest
+    @MethodSource("reversedRanges")
+    public void testGetEvenInRangeReversed(int start, int end) {}
+
+    static Stream<Arguments> reversedRanges() {
+        return Stream.generate(() -> {
+            int start = random.nextInt(20) + 10;      // 10..29
+            int end = random.nextInt(start - 5) + 1;  // 1..start-5, всегда < start
+            return Arguments.of(start, end);
+        }).limit(5);
+    }
+
 
     // 4. @Test — BolsheMensheNull
     @Test
@@ -207,7 +238,7 @@ public class MainTest {
     }
 
     // 11. @ParameterizedTest — Names
-    @ParameterizedTest                          // ← было @Test
+    @ParameterizedTest
     @MethodSource("randomNames")
     public void testRemoveSpecificName(List<String> input, String nameToRemove) {
         List<String> expected = new ArrayList<>();
@@ -221,17 +252,48 @@ public class MainTest {
         assertEquals(expected, actual);
     }
 
-    static Stream<Arguments> randomNames() {    // ← Stream<Arguments>, не Stream<String[]>
+    static Stream<Arguments> randomNames() {
         String[] pool = {"Aleksei", "Ivan", "Anastasiya", "Petr", "Anna", "Oleg"};
         return Stream.generate(() -> {
-            int size = random.nextInt(5) + 2;   // минимум 2 имени
+            int size = random.nextInt(5) + 2;
             List<String> list = new ArrayList<>();
             for (int i = 0; i < size; i++) {
                 list.add(pool[random.nextInt(pool.length)]);
             }
             String toRemove = list.get(random.nextInt(list.size()));
-            return Arguments.of(list, toRemove);  // ← передаём ДВА аргумента
+            return Arguments.of(list, toRemove);
         }).limit(5);
 
+    }
+
+// 12. Reverse
+@ParameterizedTest
+@MethodSource("randomStringArrays")
+public void testReverse(String[] input) {
+    String[] expected = new String[input.length];
+    for (int i = 0; i < input.length; i++) {
+        expected[i] = input[input.length - 1 - i];
+    }
+
+    String[] actual = Main.reverse(input);
+
+    System.out.println("reverse(" + Arrays.toString(input) + ") = " + Arrays.toString(actual)
+            + ", expected = " + Arrays.toString(expected));
+    check(Arrays.equals(expected, actual));
+    assertArrayEquals(expected, actual,
+            "Ожидался массив " + Arrays.toString(expected)
+                    + ", но получен " + Arrays.toString(actual));
+}
+
+    static Stream<Arguments> randomStringArrays() {
+        String[] pool = new String[]{"a", "b", "c", "d", "e", "f"};
+        return Stream.generate(() -> {
+            int size = random.nextInt(6) + 1;
+            String[] arr = new String[size];
+            for (int i = 0; i < size; i++) {
+                arr[i] = pool[random.nextInt(pool.length)];
+            }
+            return Arguments.of((Object) arr);
+        }).limit(5);
     }
 }

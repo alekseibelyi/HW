@@ -32,4 +32,13 @@ public class Main {
         }
     }
 
-}
+        // 4. Разворот массива строк
+        public static String[] reverse(String[] arr) {
+            if (arr == null) return null;
+            String[] result = new String[arr.length];
+            for (int i = 0; i < arr.length; i++) {
+                result[i] = arr[arr.length - 1 - i];
+            }
+            return result;
+        }
+    }
