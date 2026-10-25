@@ -13,6 +13,8 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.9.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    implementation("io.rest-assured:rest-assured:5.5.6")
+    testImplementation("org.assertj:assertj-core:3.25.3")
 }
 
 tasks.withType<JavaCompile> {
@@ -73,3 +75,20 @@ tasks.register<Test>("runAssertionsTests") {
         showStandardStreams = true
     }
 }
+// Задача для запуска ТОЛЬКО API-тестов
+    tasks.register<Test>("runApiTests") {
+        description = "Запускает только API-тесты (те, что заканчиваются на *ApiTests или *ApiEndpointsTest)"
+        group = "verification"
+        testClassesDirs = sourceSets["test"].output.classesDirs
+        classpath = sourceSets["test"].runtimeClasspath
+        useJUnitPlatform {
+            // Фильтруем классы, содержащие "Api" в названии
+            include("**/*Api*Test.class")
+        }
+        testLogging {
+            events("passed", "failed", "skipped")
+            showStandardStreams = true
+        }
+    }
+
+
