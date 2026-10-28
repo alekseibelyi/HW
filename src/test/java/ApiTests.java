@@ -10,6 +10,7 @@ import java.util.List;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.collection.IsEmptyCollection.empty;
 
 public class ApiTests {
 
@@ -32,9 +33,8 @@ public class ApiTests {
                 .get("/goods/list")
                 .then()
                 .statusCode(200)
-                // Разрешаем быть списку как пустым, так и не пустым (чтобы не падало)
-                .body("isEmpty()", Matchers.anyOf(Matchers.is(true), Matchers.is(false)));
-    }
+                .body("goods", empty());
+        }
 
     // Метод 2. RequestSpecification
     @Test
@@ -49,7 +49,7 @@ public class ApiTests {
                 .get("/goods/list")
                 .then()
                 .statusCode(200)
-                .body("isEmpty()", Matchers.anyOf(Matchers.is(true), Matchers.is(false)));
+                .body("goods", empty());
     }
 
     // Метод 3. POST + GET через встроенные проверки Rest Assured
@@ -70,6 +70,8 @@ public class ApiTests {
 
         // 2. Проверяем в списке
         given()
+                .queryParam("page", 0)
+                .queryParam("size", 100)
                 .when()
                 .get("/goods/list")
                 .then()
@@ -95,10 +97,13 @@ public class ApiTests {
 
         // 2. Получаем список
         Response response = given()
+                .queryParam("page", 0)
+                .queryParam("size", 100)
                 .when()
                 .get("/goods/list")
                 .then()
                 .statusCode(200)
+                .body("goods.name", Matchers.hasItem(goodName))
                 .extract().response();
 
         // 3. Проверяем через AssertJ

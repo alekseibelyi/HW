@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
+import org.junit.jupiter.api.AfterEach;
+
+import java.util.List;
 
 public class ApiEndpointsTest {
 
@@ -17,7 +20,31 @@ public class ApiEndpointsTest {
         RestAssured.baseURI = BASE_URL;
     }
 
-    // Вспомогательный метод: создает товар и возвращает его ID
+    @AfterEach
+    public void tearDown() {
+        List<Integer> ids = given()
+                .auth().preemptive().basic(LOGIN, PASSWORD)
+                .queryParam("page", 0)
+                .queryParam("size", 1000)
+                .when()
+                .get("/goods/list")
+                .then()
+                .statusCode(200)
+                .extract().jsonPath().getList("goods.id");
+
+        if (ids != null) {
+            for (Integer id : ids) {
+                given()
+                        .auth().preemptive().basic(LOGIN, PASSWORD)
+                        .when()
+                        .delete("/goods/" + id)
+                        .then()
+                        .statusCode(anyOf(is(200), is(404))); // Удаляем, если есть
+            }
+        }
+    }
+
+   // Вспомогательный метод: создает товар и возвращает его ID
     private long createItemAndGetId(String name, double price) {
         return given()
                 .auth().preemptive().basic(LOGIN, PASSWORD)
