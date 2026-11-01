@@ -15,6 +15,8 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("io.rest-assured:rest-assured:5.5.6")
     testImplementation("org.assertj:assertj-core:3.25.3")
+    testImplementation("org.seleniumhq.selenium:selenium-java:4.16.1")
+    testImplementation("com.codeborne:selenide:7.0.4")
 }
 
 tasks.withType<JavaCompile> {
