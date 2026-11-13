@@ -35,6 +35,12 @@ public class SeleniumUiTest {
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
     }
 
+    @AfterEach
+    public void tearDown() {
+        if (driver != null) {
+            driver.quit();
+        }
+    }
     // Вспомогательный метод для авторизации в Spring Security
     private void loginIfRequired() {
         // Если в URL есть слово "login" — значит, нас выкинуло на страницу входа
