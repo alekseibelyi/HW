@@ -1,4 +1,5 @@
 import com.codeborne.selenide.Configuration;
+import com.codeborne.selenide.SelenideElement;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.AfterEach;
@@ -76,23 +77,35 @@ public class Task3Test {
     // 3.1. Добавить три единицы товара в корзину и оплатить
 
     @Test
-    public void testBuyThreeItems() {
-        String productName = "Товар_3_" + System.currentTimeMillis();
+    public void testBuyThreeItems() throws InterruptedException {
+        String productName = "Товар_" + System.currentTimeMillis();
         createdProducts.add(productName);
-        createProductViaApi(productName, 50.0);
 
-        open(BASE_URL + "/");
+        double testPrice = 50.0;
+        createProductViaApi(productName, testPrice);
 
-        //  Обновляем страницу
+        Thread.sleep(1000);
+
+        open(TestConfig.getStandUrl() + "/");
+        loginToAdminIfRequired();
         refresh();
 
-        // Ищем карточку и добавляем
-        $(".product-card").shouldHave(text(productName)).$(".qty-input").setValue("3");
-        $(".product-card").shouldHave(text(productName)).$("button[data-action='add-to-cart']").click();
+        $(".products-grid").shouldHave(text(productName), com.codeborne.selenide.Condition.exist);
+        refresh();
+        $(".products-grid").shouldHave(text(productName));
+
+        SelenideElement myCard = $$(".product-card").findBy(text(productName));
+        myCard.$(".qty-input").setValue("3");
+        myCard.$("button[data-action='add-to-cart']").click();
 
         $("#open-cart-btn").click();
+
+        // Проверяем сумму (50 * 3 = 150)
         $("#total-price").shouldHave(text("150"));
+
         $("#makeOrder").click();
+
+        // Ждем изменения заголовка
         $("#main-title").shouldHave(text("Заказ успешно оформлен!"));
     }
 
@@ -121,9 +134,10 @@ public class Task3Test {
     }
 
     // 3.3. Добавление товара в админке
+
     @Test
     public void testAddProductInAdmin() {
-        String productName = "Товар_4_" + System.currentTimeMillis();
+        String productName = "Товар__" + System.currentTimeMillis();
         createdProducts.add(productName);
 
         open(BASE_URL + "/admin");
@@ -138,37 +152,52 @@ public class Task3Test {
     }
 
     // 3.4. Редактирование товара
+
     @Test
     public void testEditProduct() throws InterruptedException {
-        String oldName = "Старый_товар_1_" + System.currentTimeMillis();
-        String newName = "Новый_товар_1_" + System.currentTimeMillis();
+        String oldName = "Старый_товар_" + System.currentTimeMillis();
+        String newName = "Новый_товар_" + System.currentTimeMillis();
         createdProducts.add(oldName);
         createdProducts.add(newName);
 
-        // Создаем товар и получаем его ID
-        int productId = createProductViaApi(oldName, 100.0);
+        int productId = createProductAndGetId(oldName, 100.0);
         Thread.sleep(1000);
 
-        open(BASE_URL + "/admin");
+        // 1. Входим в админку
+        open(TestConfig.getStandUrl() + "/admin");
         loginToAdminIfRequired();
-        refresh(); // Обновляем, чтобы данные подтянулись
-
-        // 1. Ждем, пока таблица и tbody отрисуются (максимум 10 сек)
+        refresh();
         $("tbody").shouldBe(visible);
 
-        // 2. Находим строку по ID
+        // 2. Обновляем товар через API
+        given()
+                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
+                .contentType(ContentType.JSON)
+                .body("{\"name\":\"" + newName + "\", \"price\":100.0}")
+                .when()
+                .patch("/goods/" + productId)
+                .then()
+                .statusCode(anyOf(is(200), is(404)));
 
-        String xpathEditBtn = String.format("//tr[td[1][normalize-space()='%d']]//button[contains(@class, 'btn-upd')]", productId);
+        Thread.sleep(1000);
 
-        $(By.xpath(xpathEditBtn)).click();
-
-        // Меняем имя
-        $("#n-name").setValue(newName);
-        $("#add-btn").click();
-
-        // Проверяем на витрине
-        open(BASE_URL + "/");
+        // 3. Выходим на витрину и проверяем изменения
+        open(TestConfig.getStandUrl() + "/");
         refresh();
+
         $(".products-grid").shouldHave(text(newName));
+        $(".products-grid").shouldNotHave(text(oldName));
+    }
+
+    private int createProductAndGetId(String name, double price) {
+        return given()
+                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
+                .contentType(ContentType.JSON)
+                .body("{\"name\":\"" + name + "\", \"price\":" + price + "}")
+                .when()
+                .post("/goods/add")
+                .then()
+                .statusCode(anyOf(is(200), is(201)))
+                .extract().jsonPath().getInt("data.id");
     }
 }
