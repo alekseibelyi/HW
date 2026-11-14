@@ -116,19 +116,14 @@ public class SelenideUiTest {
         SelenideElement firstCard = $(".product-card").shouldBe(visible);
         SelenideElement addBtn = firstCard.$("button[data-action='add-to-cart']");
         SelenideElement qtyInput = firstCard.$(".qty-input");
-
         qtyInput.setValue("10");
         addBtn.click();
-
         $("#open-cart-btn").click();
         $("#makeOrder").click();
-
         Alert alert = switchTo().alert();
         String alertText = alert.getText();
-
         assertTrue(alertText.contains("Денег не хватает"), "Неверный текст алерта: " + alertText);
         assertTrue(alertText.contains("превышает лимит 300"), "Неверный текст алерта: " + alertText);
-
         alert.accept();
     }
 }

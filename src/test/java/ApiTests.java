@@ -24,9 +24,7 @@ public class ApiTests {
         RestAssured.filters(new AllureRestAssured());
     }
 
-
     // 1.1. Методы для обращения к эндпоинтам
-
     @Step("Получить список товаров (GET /goods/list)")
     private Response getGoodsList() {
         return given()
@@ -84,7 +82,6 @@ public class ApiTests {
         assertStatusCode(response, 200);
         assertGoodsListIsEmpty(response);
     }
-
     // Метод 2. RequestSpecification
     @Test
     public void testGetGoodsListWithRequestSpec() {

@@ -12,13 +12,11 @@ public class AdminPage {
     public SelenideElement table() { return $("table"); }
     public SelenideElement tbody() { return $("tbody"); }
 
-
     @Step("Заполнить данные товара: имя '{name}', цена '{price}'")
     public void fillProductData(String name, String price) {
         nameInput().setValue(name);
         priceInput().setValue(price);
     }
-
     @Step("Нажать кнопку 'Создать'")
     public void clickAdd() {
         addBtn().click();
@@ -29,7 +27,6 @@ public class AdminPage {
         String xpathRow = String.format("//tr[td[1][normalize-space()='%d']]", id);
         $(org.openqa.selenium.By.xpath(xpathRow)).$(".btn-upd").click();
     }
-
     @Step("Нажать 'Сохранить' для товара с ID {id}")
     public void clickSaveById(int id) {
         String xpathRow = String.format("//tr[td[1][normalize-space()='%d']]", id);

@@ -9,14 +9,12 @@ import static com.codeborne.selenide.Selenide.$;
 public class PageAssert {
 
     // === Проверки для формы авторизации ===
-
     @Step("Проверить, что страница авторизации отображается")
     public static void assertLoginPageIsVisible() {
         $(LoginPage.USERNAME_INPUT).shouldBe(Condition.visible);
         $(LoginPage.PASSWORD_INPUT).shouldBe(Condition.visible);
         $(LoginPage.SUBMIT_BUTTON).shouldBe(Condition.visible);
     }
-
     @Step("Проверить, что поле логина содержит текст '{expectedText}'")
     public static void assertUsernameHasText(String expectedText) {
         $(LoginPage.USERNAME_INPUT).shouldHave(Condition.value(expectedText));
@@ -28,12 +26,10 @@ public class PageAssert {
     }
 
     // === Проверки для главной страницы ===
-
     @Step("Проверить, что товар '{productName}' виден на странице")
     public static void assertProductIsVisible(String productName) {
         new MainPage().productTitles().findBy(Condition.text(productName)).shouldBe(Condition.visible);
     }
-
     @Step("Проверить, что счетчик корзины равен {expectedCount}")
     public static void assertCartCountIs(int expectedCount) {
         new MainPage().cartCounter().shouldHave(Condition.text(String.valueOf(expectedCount)));

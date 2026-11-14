@@ -43,7 +43,6 @@ public class Task3Test {
     }
 
     // Бизнес-методы и API-запросы
-
     @Step("Создать товар через API: '{name}', цена {price}")
     private int createProductViaApi(String name, double price) {
         return given()
@@ -96,7 +95,6 @@ public class Task3Test {
     }
 
     // Тесты
-
     // 3.1. Добавить три единицы товара в корзину и оплатить
     @Test
     public void testBuyThreeItems() throws InterruptedException {

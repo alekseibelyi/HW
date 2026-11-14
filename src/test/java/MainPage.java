@@ -19,11 +19,9 @@ public class MainPage {
     public SelenideElement addToCartButton(String productName) {
         return productCards().findBy(text(productName)).$("button[data-action='add-to-cart']");
     }
-
     public SelenideElement qtyInput(String productName) {
         return productCards().findBy(text(productName)).$(".qty-input");
     }
-
     public SelenideElement openCartButton() {
         return $("#open-cart-btn");
     }
