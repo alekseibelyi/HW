@@ -126,7 +126,6 @@ public class SelenideUiTest {
         Alert alert = switchTo().alert();
         String alertText = alert.getText();
 
-        // Заменили assert на assertTrue
         assertTrue(alertText.contains("Денег не хватает"), "Неверный текст алерта: " + alertText);
         assertTrue(alertText.contains("превышает лимит 300"), "Неверный текст алерта: " + alertText);
 

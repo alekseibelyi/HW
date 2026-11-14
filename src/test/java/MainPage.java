@@ -8,7 +8,6 @@ import static com.codeborne.selenide.Selenide.$$;
 
 public class MainPage {
 
-    // Геттеры (без @Step, чтобы не засорять отчет)
     public ElementsCollection productCards() {
         return $$(".product-card");
     }
@@ -36,8 +35,6 @@ public class MainPage {
     public SelenideElement makeOrderBtn() {
         return $("#makeOrder");
     }
-
-    // === Методы взаимодействия (С @Step) ===
 
     @Step("Нажать 'В корзину' для товара '{productName}'")
     public void clickAddToCart(String productName) {

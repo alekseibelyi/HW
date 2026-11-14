@@ -28,7 +28,6 @@ public class SeleniumUiTest {
     @BeforeEach
     public void setUp() {
         ChromeOptions options = new ChromeOptions();
-        // options.addArguments("--headless");
         options.addArguments("--window-size=1920,1080");
 
         driver = new ChromeDriver(options);
@@ -41,11 +40,9 @@ public class SeleniumUiTest {
             driver.quit();
         }
     }
-    // Вспомогательный метод для авторизации в Spring Security
     private void loginIfRequired() {
-        // Если в URL есть слово "login" — значит, нас выкинуло на страницу входа
         if (driver.getCurrentUrl().contains("login")) {
-            // Ждем поля ввода (стандартные id в Spring Security: username и password)
+            // Ждем поля ввода
             WebElement usernameField = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("username")));
             WebElement passwordField = driver.findElement(By.id("password"));
             WebElement submitBtn = driver.findElement(By.cssSelector("button[type='submit']"));
@@ -56,9 +53,7 @@ public class SeleniumUiTest {
         }
     }
 
-    // ============================================================
     // 1.1. Добавить товар через админку, выйти на витрину и проверить
-    // ============================================================
     @Test
     public void testAddProductViaAdminAndCheckOnSite() {
         String productName = "Товар_" + new Random().nextInt(10);
@@ -69,7 +64,7 @@ public class SeleniumUiTest {
         // 2. Авторизуемся, если выкинуло на /login
         loginIfRequired();
 
-        // 3. Ждем загрузки поля "Название" (теперь мы в админке)
+        // 3. Ждем загрузки поля "Название"
         WebElement nameInput = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("n-name")));
         WebElement priceInput = driver.findElement(By.id("n-price"));
         WebElement addBtn = driver.findElement(By.id("add-btn"));
@@ -90,9 +85,7 @@ public class SeleniumUiTest {
         assertTrue(isProductDisplayed, "Товар '" + productName + "' не найден на витрине!");
     }
 
-    // ============================================================
     // 1.2. Добавить товар в корзину и проверить, что он отображается
-    // ============================================================
     @Test
     public void testAddProductToCart() {
         // 1. Открываем витрину
@@ -120,9 +113,7 @@ public class SeleniumUiTest {
         assertEquals(expectedName, cartItemName.getText(), "Название товара в корзине не совпадает!");
     }
 
-    // ============================================================
     // 1.3. Попытаться войти в админку с неверным логином и паролем
-    // ============================================================
     @Test
     public void testLoginToAdminWithWrongCredentials() {
         driver.get(ADMIN_URL);
@@ -135,20 +126,15 @@ public class SeleniumUiTest {
         usernameField.sendKeys("wrong_user");
         passwordField.sendKeys("wrong_password");
         submitBtn.click();
-
-        // После неверного ввода Spring Security вернет нас обратно на страницу логина (часто с параметром ?error)
-        // Проверяем, что мы все еще на странице логина
         wait.until(ExpectedConditions.urlContains("login"));
 
-        // Проверяем наличие сообщения об ошибке (Spring обычно добавляет .alert или div с текстом "Bad credentials")
-        // Если не знаете точный класс ошибки, просто проверяем, что мы не в админке
+        // Проверяем наличие сообщения об ошибке
         boolean isAdminLoaded = driver.getPageSource().contains("n-name");
         assertFalse(isAdminLoaded, "Ошибка: удалось зайти в админку с неверным паролем!");
     }
 
-    // ============================================================
     // 1.4. Проверить сохранение товаров в корзине после обновления страницы
-    // ============================================================
+
     @Test
     public void testCartSavedAfterRefresh() {
         // 1. Открываем витрину
@@ -160,9 +146,9 @@ public class SeleniumUiTest {
         WebElement addToCartBtn = driver.findElement(By.cssSelector(".product-card button[data-action='add-to-cart']"));
         addToCartBtn.click();
 
-        // 3. Обновляем страницу (F5)
+        // 3. Обновляем страницу
         driver.navigate().refresh();
-        loginIfRequired(); // На всякий случай, если сессия слетела
+        loginIfRequired();
 
         // 4. Открываем корзину
         WebElement openCartBtn = wait.until(ExpectedConditions.elementToBeClickable(By.id("open-cart-btn")));

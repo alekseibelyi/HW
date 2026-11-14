@@ -42,9 +42,7 @@ public class Task3Test {
         createdProducts.clear();
     }
 
-    // ============================================================
-    // Бизнес-методы и API-запросы (покрыты @Step)
-    // ============================================================
+    // Бизнес-методы и API-запросы
 
     @Step("Создать товар через API: '{name}', цена {price}")
     private int createProductViaApi(String name, double price) {
@@ -97,9 +95,7 @@ public class Task3Test {
                 .statusCode(anyOf(is(200), is(404)));
     }
 
-    // ============================================================
     // Тесты
-    // ============================================================
 
     // 3.1. Добавить три единицы товара в корзину и оплатить
     @Test
@@ -177,7 +173,7 @@ public class Task3Test {
         createdProducts.add(oldName);
         createdProducts.add(newName);
 
-        // Создаем через API (возвращает ID)
+        // Создаем через API
         int productId = createProductViaApi(oldName, 100.0);
         Thread.sleep(1000);
 

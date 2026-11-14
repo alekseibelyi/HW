@@ -82,9 +82,7 @@ public class PageObjectScenariosTest {
     }
 
 
-    // ============================================================
     // 2.1. Добавить три единицы товара в корзину и оплатить
-    // ============================================================
     @Test
     public void testOrderThreeItems() throws InterruptedException {
         String productName = "Product_" + System.currentTimeMillis();
@@ -112,9 +110,7 @@ public class PageObjectScenariosTest {
         PageAssert.assertOrderSuccess();
     }
 
-    // ============================================================
     // 2.2. Несколько разных товаров, проверка суммы
-    // ============================================================
     @Test
     public void testMultipleProductsSum() throws InterruptedException {
         String p1 = "Product_2" + System.currentTimeMillis();
@@ -138,9 +134,8 @@ public class PageObjectScenariosTest {
         PageAssert.assertCartHasItems(2);
     }
 
-    // ============================================================
+
     // 2.3. Войти в админку и добавить товар
-    // ============================================================
     @Test
     public void testAddProductInAdmin() {
         String productName = "Product_4" + System.currentTimeMillis();
@@ -156,9 +151,8 @@ public class PageObjectScenariosTest {
         PageAssert.assertToastContains("добавлен");
     }
 
-    // ============================================================
+
     // 2.4. Войти в админку и отредактировать товар
-    // ============================================================
     @Test
     public void testEditProduct() throws InterruptedException {
         String oldName = "Product_Old_" + System.currentTimeMillis();
