@@ -1,5 +1,7 @@
 import com.codeborne.selenide.Configuration;
-import io.restassured.RestAssured;
+import com.codeborne.selenide.logevents.SelenideLogger;
+import io.qameta.allure.Step;
+import io.qameta.allure.selenide.AllureSelenide;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -21,10 +23,15 @@ public class PageObjectScenariosTest {
     public static void setup() {
         Configuration.browserSize = "1920x1080";
         Configuration.timeout = TestConfig.getTimeout();
-        RestAssured.baseURI = TestConfig.getApiUrl();
+
+        // 1.6. Allure Selenide Listener
+        SelenideLogger.addListener("AllureSelenide", new AllureSelenide()
+                .screenshots(true)
+                .savePageSource(true));
     }
 
     @AfterEach
+    @Step("Удалить созданные тестовые данные (товары) через API")
     public void tearDown() {
         for (String name : createdProducts) {
             Integer id = given()
@@ -42,7 +49,8 @@ public class PageObjectScenariosTest {
         createdProducts.clear();
     }
 
-    // Вспомогательный метод для создания товара через API
+    // 1.4. Бизнес-метод покрыт @Step
+    @Step("Создать товар через API: имя '{name}', цена {price}")
     private int createProductViaApi(String name, double price) {
         return given()
                 .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
@@ -53,14 +61,30 @@ public class PageObjectScenariosTest {
                 .extract().jsonPath().getInt("data.id");
     }
 
-    // Вспомогательный метод для авторизации
+    // 1.4. Бизнес-метод покрыт @Step
+    @Step("Авторизоваться в админке через UI")
     private void loginToAdmin() {
         open(TestConfig.getStandUrl() + "/login");
         new LoginPage().login(TestConfig.getAdminLogin(), TestConfig.getAdminPassword());
     }
 
+    // 1.4. Бизнес-метод покрыт @Step (используется в 2.4)
+    @Step("Обновить данные товара через API (ID: {id}, новое имя: '{newName}')")
+    private void updateProductViaApi(int id, String newName, double price) {
+        given()
+                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
+                .contentType(ContentType.JSON)
+                .body("{\"name\":\"" + newName + "\", \"price\":" + price + "}")
+                .when()
+                .patch("/goods/" + id)
+                .then()
+                .statusCode(anyOf(is(200), is(404)));
+    }
 
-    // 2.1. Добавить три единицы товара в корзину и оплатить (<=300)
+
+    // ============================================================
+    // 2.1. Добавить три единицы товара в корзину и оплатить
+    // ============================================================
     @Test
     public void testOrderThreeItems() throws InterruptedException {
         String productName = "Product_" + System.currentTimeMillis();
@@ -76,12 +100,10 @@ public class PageObjectScenariosTest {
         mainPage.setQuantity(productName, "3");
         mainPage.clickAddToCart(productName);
 
-        // Ждем, пока товар добавится и обновится счетчик
         Thread.sleep(500);
 
         mainPage.clickOpenCart();
 
-        // Ждем, пока модальное окно корзины отрисуется
         $("#total-price").shouldBe(com.codeborne.selenide.Condition.visible);
 
         PageAssert.assertTotalPrice("150");
@@ -90,7 +112,9 @@ public class PageObjectScenariosTest {
         PageAssert.assertOrderSuccess();
     }
 
+    // ============================================================
     // 2.2. Несколько разных товаров, проверка суммы
+    // ============================================================
     @Test
     public void testMultipleProductsSum() throws InterruptedException {
         String p1 = "Product_2" + System.currentTimeMillis();
@@ -110,12 +134,13 @@ public class PageObjectScenariosTest {
         mainPage.clickAddToCart(p2);
         mainPage.clickOpenCart();
 
-        // Проверяем сумму (10 + 25 = 35) и количество
         PageAssert.assertTotalPrice("35");
         PageAssert.assertCartHasItems(2);
     }
 
-    // 2.3. Войти в админку и добавить товар. Проверить уведомление.
+    // ============================================================
+    // 2.3. Войти в админку и добавить товар
+    // ============================================================
     @Test
     public void testAddProductInAdmin() {
         String productName = "Product_4" + System.currentTimeMillis();
@@ -124,16 +149,16 @@ public class PageObjectScenariosTest {
         loginToAdmin();
         open(TestConfig.getStandUrl() + "/admin");
 
-        // Используем PageObject админки
         AdminPage adminPage = new AdminPage();
         adminPage.fillProductData(productName, "200");
         adminPage.clickAdd();
 
-        // Проверяем уведомление
         PageAssert.assertToastContains("добавлен");
     }
 
+    // ============================================================
     // 2.4. Войти в админку и отредактировать товар
+    // ============================================================
     @Test
     public void testEditProduct() throws InterruptedException {
         String oldName = "Product_Old_" + System.currentTimeMillis();
@@ -157,15 +182,8 @@ public class PageObjectScenariosTest {
         // 2. Вводим новые данные в форму
         adminPage.fillProductData(newName, "100");
 
-        // 3. Сохраняем через API
-        io.restassured.RestAssured.given()
-                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
-                .contentType(io.restassured.http.ContentType.JSON)
-                .body("{\"name\":\"" + newName + "\", \"price\":100.0}")
-                .when()
-                .patch("/goods/" + id)
-                .then()
-                .statusCode(anyOf(is(200), is(404)));
+        // 3. Сохраняем через API (обернуто в @Step метод updateProductViaApi)
+        updateProductViaApi(id, newName, 100.0);
 
         Thread.sleep(1000);
 
@@ -173,7 +191,6 @@ public class PageObjectScenariosTest {
         open(TestConfig.getStandUrl() + "/");
         refresh();
         PageAssert.assertProductIsVisible(newName);
-        // Убеждаемся, что старого товара нет
         $(".products-grid").shouldNotHave(com.codeborne.selenide.Condition.text(oldName));
     }
 }
