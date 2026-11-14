@@ -30,7 +30,6 @@ public class PageObjectTest {
         SelenideLogger.addListener("AllureSelenide", new AllureSelenide().screenshots(true).savePageSource(true));
         RestAssured.filters(new AllureRestAssured());
     }
-
     @AfterEach
     @Step("Удалить тестовый товар '{testProductName}' через API")
     public void tearDown() {
@@ -59,7 +58,6 @@ public class PageObjectTest {
                 .then()
                 .statusCode(anyOf(is(200), is(201)));
     }
-
     @Test
     @Description("Проверка работы PageObject: авторизация и добавление товара в корзину")
     public void testPageObjectUsage() {

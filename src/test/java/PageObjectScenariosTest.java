@@ -151,7 +151,6 @@ public class PageObjectScenariosTest {
         PageAssert.assertToastContains("добавлен");
     }
 
-
     // 2.4. Войти в админку и отредактировать товар
     @Test
     public void testEditProduct() throws InterruptedException {
