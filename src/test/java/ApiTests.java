@@ -24,9 +24,8 @@ public class ApiTests {
         RestAssured.filters(new AllureRestAssured());
     }
 
-    // ============================================================
-    // 1.1. Методы для обращения к эндпоинтам (покрыты @Step)
-    // ============================================================
+
+    // 1.1. Методы для обращения к эндпоинтам
 
     @Step("Получить список товаров (GET /goods/list)")
     private Response getGoodsList() {
@@ -59,9 +58,7 @@ public class ApiTests {
                 .statusCode(Matchers.anyOf(Matchers.is(200), Matchers.is(201)));
     }
 
-    // ============================================================
     // 1.2. API-проверки (покрыты @Step)
-    // ============================================================
 
     @Step("Проверить, что код ответа равен {expectedCode}")
     private void assertStatusCode(Response response, int expectedCode) {
@@ -78,9 +75,7 @@ public class ApiTests {
         response.then().body("goods.name", Matchers.hasItem(goodName));
     }
 
-    // ============================================================
     // ТЕСТЫ
-    // ============================================================
 
     // Метод 1. given() / when() / then()
     @Test

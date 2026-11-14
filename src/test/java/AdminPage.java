@@ -5,7 +5,6 @@ import static com.codeborne.selenide.Selenide.$;
 
 public class AdminPage {
 
-    // Геттеры (можно без @Step, чтобы не засорять отчет, но если хотите — добавьте)
     public SelenideElement nameInput() { return $("#n-name"); }
     public SelenideElement priceInput() { return $("#n-price"); }
     public SelenideElement addBtn() { return $("#add-btn"); }
@@ -13,7 +12,6 @@ public class AdminPage {
     public SelenideElement table() { return $("table"); }
     public SelenideElement tbody() { return $("tbody"); }
 
-    // === Методы взаимодействия (С @Step) ===
 
     @Step("Заполнить данные товара: имя '{name}', цена '{price}'")
     public void fillProductData(String name, String price) {

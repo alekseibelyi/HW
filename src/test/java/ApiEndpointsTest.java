@@ -49,9 +49,7 @@ public class ApiEndpointsTest {
         }
     }
 
-    // ============================================================
     // 1.1. Шаги для запросов к эндпоинтам
-    // ============================================================
 
     @Step("Создать товар через API: имя '{name}', цена {price}")
     private long createItemAndGetId(String name, double price) {
@@ -120,10 +118,7 @@ public class ApiEndpointsTest {
                 .then()
                 .extract().response();
     }
-
-    // ============================================================
     // 1.2. Шаги для API-проверок
-    // ============================================================
 
     @Step("Проверить, что код ответа равен {expectedCode}")
     private void assertStatusCode(Response response, int expectedCode) {
@@ -146,9 +141,7 @@ public class ApiEndpointsTest {
     }
 
 
-    // ============================================================
     // ТЕСТЫ
-    // ============================================================
 
     // 1. POST /goods/add
     @Test
