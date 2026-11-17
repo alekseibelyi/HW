@@ -1,102 +1,50 @@
 plugins {
     id("java")
-    id("io.qameta.allure") version "2.11.2"
+    id("io.qameta.allure") version "2.11.2" apply false // <-- Добавить эту строку
 }
 
-group = "org.example"
-version = "1.0-SNAPSHOT"
+allprojects {
+    group = "org.example"
+    version = "1.0-SNAPSHOT"
 
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.9.1"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    implementation("io.rest-assured:rest-assured:5.5.6")
-    testImplementation("org.assertj:assertj-core:3.25.3")
-    testImplementation("org.seleniumhq.selenium:selenium-java:4.16.1")
-    testImplementation("com.codeborne:selenide:7.0.4")
-    // Allure
-    testImplementation("io.qameta.allure:allure-junit5:2.24.0")
-    testImplementation("io.qameta.allure:allure-selenide:2.24.0")
-    testImplementation("io.qameta.allure:allure-rest-assured:2.24.0")
-    testImplementation("org.aspectj:aspectjweaver:1.9.21")
-}
-
-tasks.withType<JavaCompile> {
-    options.encoding = "UTF-8"
-}
-
-tasks.test {
-    useJUnitPlatform()
-    testLogging {
-        events("passed", "failed", "skipped")
-        showStandardStreams = true
+    repositories {
+        mavenCentral()
     }
 }
 
-// Задача 1: запуск всех тестов
-tasks.register<DefaultTask>("runAllTests") {
-    dependsOn(tasks.test)
-    group = "verification"
-    description = "Запускает все тесты в проекте"
+subprojects {
+    apply(plugin = "java")
+    apply(plugin = "io.qameta.allure")
+
+    dependencies {
+        testImplementation(platform("org.junit:junit-bom:5.10.0"))
+        testImplementation("org.junit.jupiter:junit-jupiter")
+        testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+        testImplementation("io.qameta.allure:allure-junit5:2.24.0")
+
+        // ВАЖНО: Обновите AspectJ
+        testImplementation("org.aspectj:aspectjweaver:1.9.20")
+    }
+
+    tasks.withType<Test> {
+        useJUnitPlatform()
+        systemProperty("allure.results.directory", "$buildDir/allure-results")
+    }
+
+    dependencies {
+        testImplementation(platform("org.junit:junit-bom:5.10.0"))
+        testImplementation("org.junit.jupiter:junit-jupiter")
+        testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+        testImplementation("io.qameta.allure:allure-junit5:2.24.0")
+    }
+
+    tasks.withType<Test> {
+        useJUnitPlatform()
+        systemProperty("allure.results.directory", "$buildDir/allure-results")
+    }
 }
 
-// Задача 2: сообщение после прогона тестов
-tasks.register<DefaultTask>("printTestEnd") {
-    dependsOn(tasks.named("runAllTests"))
-    group = "verification"
-    description = "Выводит сообщение после прогона тестов"
-    doLast {
-        println("Test run is over")
-    }
+// Задача для генерации отчета во ВСЕХ модулях
+tasks.register("allureReportAll") {
+    dependsOn(":api-tests:allureReport", ":ui-tests:allureReport")
 }
-
-// Фильтрация по @Tag — только тесты с @Tag("main")
-tasks.register<Test>("runMainTests") {
-    description = "Запускает только тесты с тегом 'main'"
-    group = "verification"
-    testClassesDirs = sourceSets["test"].output.classesDirs
-    classpath = sourceSets["test"].runtimeClasspath
-    useJUnitPlatform {
-        includeTags("main")
-    }
-    testLogging {
-        events("passed", "failed", "skipped")
-        showStandardStreams = true
-    }
-}
-
-// Фильтрация по @Tag — только тесты с @Tag("assertions")
-tasks.register<Test>("runAssertionsTests") {
-    description = "Запускает только тесты с тегом 'assertions'"
-    group = "verification"
-    testClassesDirs = sourceSets["test"].output.classesDirs
-    classpath = sourceSets["test"].runtimeClasspath
-    useJUnitPlatform {
-        includeTags("assertions")
-    }
-    testLogging {
-        events("passed", "failed", "skipped")
-        showStandardStreams = true
-    }
-}
-// Задача для запуска ТОЛЬКО API-тестов
-    tasks.register<Test>("runApiTests") {
-        description = "Запускает только API-тесты (те, что заканчиваются на *ApiTests или *ApiEndpointsTest)"
-        group = "verification"
-        testClassesDirs = sourceSets["test"].output.classesDirs
-        classpath = sourceSets["test"].runtimeClasspath
-        useJUnitPlatform {
-            // Фильтруем классы, содержащие "Api" в названии
-            include("**/*Api*Test.class")
-        }
-        testLogging {
-            events("passed", "failed", "skipped")
-            showStandardStreams = true
-        }
-    }
-
-
