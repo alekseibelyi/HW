@@ -1,11 +1,14 @@
 import com.codeborne.selenide.Configuration;
 import com.codeborne.selenide.SelenideElement;
+import com.codeborne.selenide.logevents.SelenideLogger;
+import io.qameta.allure.Step;
+import io.qameta.allure.selenide.AllureSelenide;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import io.qameta.allure.restassured.AllureRestAssured;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,20 +20,21 @@ import static org.hamcrest.Matchers.*;
 
 public class Task3Test {
 
-    private static final String BASE_URL = "http://localhost:8080";
-    private static final String LOGIN = "admin";
-    private static final String PASSWORD = "secret123";
-
     private final List<String> createdProducts = new ArrayList<>();
 
     @BeforeAll
     public static void setup() {
         Configuration.browserSize = "1920x1080";
-        Configuration.timeout = 10000;
-        RestAssured.baseURI = BASE_URL;
+        Configuration.timeout = TestConfig.getTimeout();
+        RestAssured.baseURI = TestConfig.getApiUrl();
+
+        // Allure Listeners & Filters
+        SelenideLogger.addListener("AllureSelenide", new AllureSelenide().screenshots(true).savePageSource(true));
+        RestAssured.filters(new AllureRestAssured());
     }
 
     @AfterEach
+    @Step("Удалить созданные тестовые данные")
     public void tearDown() {
         for (String productName : createdProducts) {
             deleteProductByName(productName);
@@ -38,9 +42,11 @@ public class Task3Test {
         createdProducts.clear();
     }
 
+    // Бизнес-методы и API-запросы
+    @Step("Создать товар через API: '{name}', цена {price}")
     private int createProductViaApi(String name, double price) {
         return given()
-                .auth().preemptive().basic(LOGIN, PASSWORD)
+                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
                 .contentType(ContentType.JSON)
                 .body("{\"name\":\"" + name + "\", \"price\":" + price + "}")
                 .when()
@@ -50,32 +56,46 @@ public class Task3Test {
                 .extract().jsonPath().getInt("data.id");
     }
 
+    @Step("Удалить товар через API по имени: '{name}'")
     private void deleteProductByName(String name) {
         if (name == null) return;
         Integer id = given()
-                .auth().preemptive().basic(LOGIN, PASSWORD)
+                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
                 .queryParam("page", 0).queryParam("size", 1000)
                 .when().get("/goods/list")
                 .then().statusCode(200)
                 .extract().jsonPath().get("goods.find { it.name == '" + name + "' }.id");
 
         if (id != null) {
-            given().auth().preemptive().basic(LOGIN, PASSWORD)
+            given().auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
                     .when().delete("/goods/" + id)
                     .then().statusCode(anyOf(is(200), is(404)));
         }
     }
 
+    @Step("Авторизоваться в админке, если требуется")
     private void loginToAdminIfRequired() {
         if (webdriver().driver().url().contains("login")) {
-            $("#username").setValue(LOGIN);
-            $("#password").setValue(PASSWORD);
+            $("#username").setValue(TestConfig.getAdminLogin());
+            $("#password").setValue(TestConfig.getAdminPassword());
             $("button[type='submit']").click();
         }
     }
 
-    // 3.1. Добавить три единицы товара в корзину и оплатить
+    @Step("Обновить товар через API (ID: {id}, новое имя: '{newName}')")
+    private void updateProductViaApi(int id, String newName, double price) {
+        given()
+                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
+                .contentType(ContentType.JSON)
+                .body("{\"name\":\"" + newName + "\", \"price\":" + price + "}")
+                .when()
+                .patch("/goods/" + id)
+                .then()
+                .statusCode(anyOf(is(200), is(404)));
+    }
 
+    // Тесты
+    // 3.1. Добавить три единицы товара в корзину и оплатить
     @Test
     public void testBuyThreeItems() throws InterruptedException {
         String productName = "Товар_" + System.currentTimeMillis();
@@ -90,7 +110,7 @@ public class Task3Test {
         loginToAdminIfRequired();
         refresh();
 
-        $(".products-grid").shouldHave(text(productName), com.codeborne.selenide.Condition.exist);
+        $(".products-grid").shouldHave(text(productName), exist);
         refresh();
         $(".products-grid").shouldHave(text(productName));
 
@@ -99,13 +119,8 @@ public class Task3Test {
         myCard.$("button[data-action='add-to-cart']").click();
 
         $("#open-cart-btn").click();
-
-        // Проверяем сумму (50 * 3 = 150)
         $("#total-price").shouldHave(text("150"));
-
         $("#makeOrder").click();
-
-        // Ждем изменения заголовка
         $("#main-title").shouldHave(text("Заказ успешно оформлен!"));
     }
 
@@ -122,10 +137,9 @@ public class Task3Test {
 
         Thread.sleep(1000);
 
-        open(BASE_URL + "/");
+        open(TestConfig.getStandUrl() + "/");
         refresh();
 
-        // Ищем конкретную карточку через коллекцию и findBy
         $$(".product-card").findBy(text(product1)).$("button[data-action='add-to-cart']").click();
         $$(".product-card").findBy(text(product2)).$("button[data-action='add-to-cart']").click();
 
@@ -134,25 +148,22 @@ public class Task3Test {
     }
 
     // 3.3. Добавление товара в админке
-
     @Test
     public void testAddProductInAdmin() {
         String productName = "Товар__" + System.currentTimeMillis();
         createdProducts.add(productName);
 
-        open(BASE_URL + "/admin");
+        open(TestConfig.getStandUrl() + "/admin");
         loginToAdminIfRequired();
 
         $("#n-name").setValue(productName);
         $("#n-price").setValue("200");
         $("#add-btn").click();
 
-
         $(".toast").shouldBe(visible).shouldHave(text("добавлен"));
     }
 
     // 3.4. Редактирование товара
-
     @Test
     public void testEditProduct() throws InterruptedException {
         String oldName = "Старый_товар_" + System.currentTimeMillis();
@@ -160,7 +171,8 @@ public class Task3Test {
         createdProducts.add(oldName);
         createdProducts.add(newName);
 
-        int productId = createProductAndGetId(oldName, 100.0);
+        // Создаем через API
+        int productId = createProductViaApi(oldName, 100.0);
         Thread.sleep(1000);
 
         // 1. Входим в админку
@@ -170,15 +182,7 @@ public class Task3Test {
         $("tbody").shouldBe(visible);
 
         // 2. Обновляем товар через API
-        given()
-                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
-                .contentType(ContentType.JSON)
-                .body("{\"name\":\"" + newName + "\", \"price\":100.0}")
-                .when()
-                .patch("/goods/" + productId)
-                .then()
-                .statusCode(anyOf(is(200), is(404)));
-
+        updateProductViaApi(productId, newName, 100.0);
         Thread.sleep(1000);
 
         // 3. Выходим на витрину и проверяем изменения
@@ -187,17 +191,5 @@ public class Task3Test {
 
         $(".products-grid").shouldHave(text(newName));
         $(".products-grid").shouldNotHave(text(oldName));
-    }
-
-    private int createProductAndGetId(String name, double price) {
-        return given()
-                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
-                .contentType(ContentType.JSON)
-                .body("{\"name\":\"" + name + "\", \"price\":" + price + "}")
-                .when()
-                .post("/goods/add")
-                .then()
-                .statusCode(anyOf(is(200), is(201)))
-                .extract().jsonPath().getInt("data.id");
     }
 }

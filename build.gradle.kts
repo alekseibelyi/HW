@@ -1,5 +1,6 @@
 plugins {
     id("java")
+    id("io.qameta.allure") version "2.11.2"
 }
 
 group = "org.example"
@@ -17,12 +18,11 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.25.3")
     testImplementation("org.seleniumhq.selenium:selenium-java:4.16.1")
     testImplementation("com.codeborne:selenide:7.0.4")
-    // Allure для аннотаций @Step
-    testImplementation("io.qameta.allure:allure-selenide:2.24.0")
+    // Allure
     testImplementation("io.qameta.allure:allure-junit5:2.24.0")
-
-    // AspectJ нужен, чтобы аннотации @Step работали
-    testImplementation("org.aspectj:aspectjweaver:1.9.20")
+    testImplementation("io.qameta.allure:allure-selenide:2.24.0")
+    testImplementation("io.qameta.allure:allure-rest-assured:2.24.0")
+    testImplementation("org.aspectj:aspectjweaver:1.9.21")
 }
 
 tasks.withType<JavaCompile> {

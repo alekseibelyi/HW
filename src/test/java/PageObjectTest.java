@@ -1,4 +1,9 @@
 import com.codeborne.selenide.Configuration;
+import com.codeborne.selenide.logevents.SelenideLogger;
+import io.qameta.allure.Description;
+import io.qameta.allure.Step;
+import io.qameta.allure.restassured.AllureRestAssured;
+import io.qameta.allure.selenide.AllureSelenide;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.AfterEach;
@@ -20,11 +25,14 @@ public class PageObjectTest {
         Configuration.browserSize = "1920x1080";
         Configuration.timeout = TestConfig.getTimeout();
         RestAssured.baseURI = TestConfig.getApiUrl();
-    }
 
+        // Allure Listeners & Filters
+        SelenideLogger.addListener("AllureSelenide", new AllureSelenide().screenshots(true).savePageSource(true));
+        RestAssured.filters(new AllureRestAssured());
+    }
     @AfterEach
+    @Step("Удалить тестовый товар '{testProductName}' через API")
     public void tearDown() {
-        // Удаляем тестовый товар после каждого теста
         Integer id = given()
                 .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
                 .queryParam("page", 0).queryParam("size", 1000)
@@ -39,17 +47,22 @@ public class PageObjectTest {
         }
     }
 
-    @Test
-    public void testPageObjectUsage() {
-        // 1. Создаем товар через API, чтобы на витрине было что проверять
+    @Step("Создать тестовый товар '{name}' через API")
+    private void createProductViaApi(String name, int price) {
         given()
                 .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
                 .contentType(ContentType.JSON)
-                .body("{\"name\":\"" + testProductName + "\", \"price\":100}")
+                .body("{\"name\":\"" + name + "\", \"price\":" + price + "}")
                 .when()
                 .post("/goods/add")
                 .then()
                 .statusCode(anyOf(is(200), is(201)));
+    }
+    @Test
+    @Description("Проверка работы PageObject: авторизация и добавление товара в корзину")
+    public void testPageObjectUsage() {
+        // 1. Создаем товар через API
+        createProductViaApi(testProductName, 100);
 
         // 2. Открываем страницу логина и проверяем элементы
         open(TestConfig.getStandUrl() + "/login");

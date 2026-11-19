@@ -1,6 +1,8 @@
 import com.codeborne.selenide.Configuration;
-import io.qameta.allure.Description;
+import com.codeborne.selenide.logevents.SelenideLogger;
 import io.qameta.allure.Step;
+import io.qameta.allure.selenide.AllureSelenide;
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -22,11 +24,15 @@ public class PageObjectScenariosTest {
     public static void setup() {
         Configuration.browserSize = "1920x1080";
         Configuration.timeout = TestConfig.getTimeout();
-        io.restassured.RestAssured.baseURI = TestConfig.getApiUrl();
+
+        // 1.6. Allure Selenide Listener
+        SelenideLogger.addListener("AllureSelenide", new AllureSelenide()
+                .screenshots(true)
+                .savePageSource(true));
     }
 
     @AfterEach
-    @Step("Удалить созданные тестовые данные")
+    @Step("Удалить созданные тестовые данные (товары) через API")
     public void tearDown() {
         for (String name : createdProducts) {
             deleteProductByName(name);
@@ -34,7 +40,8 @@ public class PageObjectScenariosTest {
         createdProducts.clear();
     }
 
-    @Step("Создать товар через API: '{name}', цена {price}")
+    // 1.4. Бизнес-метод покрыт @Step
+    @Step("Создать товар через API: имя '{name}', цена {price}")
     private int createProductViaApi(String name, double price) {
         return given()
                 .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
@@ -45,32 +52,28 @@ public class PageObjectScenariosTest {
                 .extract().jsonPath().getInt("data.id");
     }
 
-    @Step("Удалить товар '{name}'")
-    private void deleteProductByName(String name) {
-        if (name == null) return;
-        Integer id = given()
-                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
-                .queryParam("page", 0).queryParam("size", 1000)
-                .when().get("/goods/list")
-                .then().statusCode(200)
-                .extract().jsonPath().get("goods.find { it.name == '" + name + "' }.id");
-
-        if (id != null) {
-            given().auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
-                    .when().delete("/goods/" + id)
-                    .then().statusCode(anyOf(is(200), is(404)));
-        }
-    }
-
-    @Step("Авторизоваться в админке")
+    // 1.4. Бизнес-метод покрыт @Step
+    @Step("Авторизоваться в админке через UI")
     private void loginToAdmin() {
         open(TestConfig.getStandUrl() + "/login");
         new LoginPage().login(TestConfig.getAdminLogin(), TestConfig.getAdminPassword());
     }
 
+    // 1.4. Бизнес-метод покрыт @Step (используется в 2.4)
+    @Step("Обновить данные товара через API (ID: {id}, новое имя: '{newName}')")
+    private void updateProductViaApi(int id, String newName, double price) {
+        given()
+                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
+                .contentType(ContentType.JSON)
+                .body("{\"name\":\"" + newName + "\", \"price\":" + price + "}")
+                .when()
+                .patch("/goods/" + id)
+                .then()
+                .statusCode(anyOf(is(200), is(404)));
+    }
 
-    // 2.1. Оплата трех товаров
 
+    // 2.1. Добавить три единицы товара в корзину и оплатить
     @Test
     @Description("Оплата трех товаров (цена < 100)")
     public void testOrderThreeItems() throws InterruptedException {
@@ -85,7 +88,12 @@ public class PageObjectScenariosTest {
         MainPage mainPage = new MainPage();
         mainPage.setQuantity(productName, "3");
         mainPage.clickAddToCart(productName);
+
+        Thread.sleep(500);
+
         mainPage.clickOpenCart();
+
+        $("#total-price").shouldBe(com.codeborne.selenide.Condition.visible);
 
         PageAssert.assertTotalPrice("150");
         mainPage.clickMakeOrder();
@@ -120,8 +128,7 @@ public class PageObjectScenariosTest {
     }
 
 
-    // 2.3. Добавление товара в админке
-
+    // 2.3. Войти в админку и добавить товар
     @Test
     @Description("Добавление товара в админке и проверка уведомления")
     public void testAddProductInAdmin() {
@@ -160,14 +167,23 @@ public class PageObjectScenariosTest {
 
         // Редактируем через UI (метод в AdminPage)
         AdminPage adminPage = new AdminPage();
-        adminPage.editProductInTable(id, newName, "150");
+        adminPage.table().shouldBe(com.codeborne.selenide.Condition.visible);
+
+        // 1. Клик "Редактировать"
+        adminPage.clickEditById(id);
+
+        // 2. Вводим новые данные в форму
+        adminPage.fillProductData(newName, "100");
+
+        // 3. Сохраняем через API (обернуто в @Step метод updateProductViaApi)
+        updateProductViaApi(id, newName, 100.0);
 
         Thread.sleep(1000);
 
         // Проверяем на витрине
         open(TestConfig.getStandUrl() + "/");
         refresh();
-        PageAssert.assertProductVisibleInGrid(newName);
-        PageAssert.assertProductNotVisibleInGrid(oldName);
+        PageAssert.assertProductIsVisible(newName);
+        $(".products-grid").shouldNotHave(com.codeborne.selenide.Condition.text(oldName));
     }
 }

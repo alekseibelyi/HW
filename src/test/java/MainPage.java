@@ -8,27 +8,32 @@ import static com.codeborne.selenide.Selenide.$$;
 
 public class MainPage {
 
-    // === Элементы ===
-    public ElementsCollection productCards() { return $$(".product-card"); }
-    public ElementsCollection productTitles() { return $$(".product-card h4"); }
+    public ElementsCollection productCards() {
+        return $$(".product-card");
+    }
+
+    public ElementsCollection productTitles() {
+        return $$(".product-card h4");
+    }
 
     public SelenideElement addToCartButton(String productName) {
         return productCards().findBy(text(productName)).$("button[data-action='add-to-cart']");
     }
-
     public SelenideElement qtyInput(String productName) {
         return productCards().findBy(text(productName)).$(".qty-input");
     }
+    public SelenideElement openCartButton() {
+        return $("#open-cart-btn");
+    }
 
-    public SelenideElement openCartButton() { return $("#open-cart-btn"); }
-    public SelenideElement cartCounter() { return $("#cart-count"); }
-    public SelenideElement makeOrderBtn() { return $("#makeOrder"); }
+    public SelenideElement cartCounter() {
+        return $("#cart-count");
+    }
 
-    // Для проверок
-    public SelenideElement productsGrid() { return $(".products-grid"); }
-    public SelenideElement mainTitle() { return $("#main-title"); }
+    public SelenideElement makeOrderBtn() {
+        return $("#makeOrder");
+    }
 
-    // === Методы взаимодействия ===
     @Step("Нажать 'В корзину' для товара '{productName}'")
     public void clickAddToCart(String productName) {
         addToCartButton(productName).click();
