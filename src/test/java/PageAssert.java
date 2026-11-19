@@ -47,7 +47,7 @@ public class PageAssert {
 
     @Step("Проверить, что заказ успешно оформлен")
     public static void assertOrderSuccess() {
-        $("#main-title").shouldHave(Condition.text("Заказ успешно оформлен!"));
+        new MainPage().mainTitle().shouldHave(Condition.text("Заказ успешно оформлен!"));
     }
 
     @Step("Проверить, что итоговая цена равна '{expectedSum}'")
