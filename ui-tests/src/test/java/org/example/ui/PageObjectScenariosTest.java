@@ -1,15 +1,17 @@
-import org.example.ui.pages.*;
+package org.example.ui;
+
 import com.codeborne.selenide.Configuration;
-import com.codeborne.selenide.logevents.SelenideLogger;
+import io.qameta.allure.Description;
 import io.qameta.allure.Step;
-import io.qameta.allure.selenide.AllureSelenide;
 import io.restassured.http.ContentType;
 import org.example.TestConfig;
 import org.example.ui.pages.AdminPage;
 import org.example.ui.pages.LoginPage;
 import org.example.ui.pages.MainPage;
+import org.example.ui.pages.PageAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -28,34 +30,19 @@ public class PageObjectScenariosTest {
     public static void setup() {
         Configuration.browserSize = "1920x1080";
         Configuration.timeout = TestConfig.getTimeout();
-
-        // 1.6. Allure Selenide Listener
-        SelenideLogger.addListener("AllureSelenide", new AllureSelenide()
-                .screenshots(true)
-                .savePageSource(true));
+        io.restassured.RestAssured.baseURI = TestConfig.getApiUrl();
     }
 
     @AfterEach
-    @Step("Удалить созданные тестовые данные (товары) через API")
+    @Step("Удалить созданные тестовые данные")
     public void tearDown() {
         for (String name : createdProducts) {
-            Integer id = given()
-                    .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
-                    .queryParam("page", 0).queryParam("size", 1000)
-                    .when().get("/goods/list")
-                    .then().statusCode(200)
-                    .extract().jsonPath().get("goods.find { it.name == '" + name + "' }.id");
-
-            if (id != null) {
-                given().auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
-                        .when().delete("/goods/" + id);
-            }
+            deleteProductByName(name);
         }
         createdProducts.clear();
     }
 
-    // 1.4. Бизнес-метод покрыт @Step
-    @Step("Создать товар через API: имя '{name}', цена {price}")
+    @Step("Создать товар через API: '{name}', цена {price}")
     private int createProductViaApi(String name, double price) {
         return given()
                 .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
@@ -66,60 +53,62 @@ public class PageObjectScenariosTest {
                 .extract().jsonPath().getInt("data.id");
     }
 
-    // 1.4. Бизнес-метод покрыт @Step
-    @Step("Авторизоваться в админке через UI")
+    @Step("Удалить товар '{name}'")
+    private void deleteProductByName(String name) {
+        if (name == null) return;
+        Integer id = given()
+                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
+                .queryParam("page", 0).queryParam("size", 1000)
+                .when().get("/goods/list")
+                .then().statusCode(200)
+                .extract().jsonPath().get("goods.find { it.name == '" + name + "' }.id");
+
+        if (id != null) {
+            given().auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
+                    .when().delete("/goods/" + id)
+                    .then().statusCode(anyOf(is(200), is(404)));
+        }
+    }
+
+    @Step("Авторизоваться в админке")
     private void loginToAdmin() {
         open(TestConfig.getStandUrl() + "/login");
         new LoginPage().login(TestConfig.getAdminLogin(), TestConfig.getAdminPassword());
     }
 
-    // 1.4. Бизнес-метод покрыт @Step (используется в 2.4)
-    @Step("Обновить данные товара через API (ID: {id}, новое имя: '{newName}')")
-    private void updateProductViaApi(int id, String newName, double price) {
-        given()
-                .auth().preemptive().basic(TestConfig.getAdminLogin(), TestConfig.getAdminPassword())
-                .contentType(ContentType.JSON)
-                .body("{\"name\":\"" + newName + "\", \"price\":" + price + "}")
-                .when()
-                .patch("/goods/" + id)
-                .then()
-                .statusCode(anyOf(is(200), is(404)));
-    }
-
-
-    // 2.1. Добавить три единицы товара в корзину и оплатить
+    // ============================================================
+    // 2.1. Оплата трех товаров (Smoke)
+    // ============================================================
+    @Tag("smoke")
     @Test
+    @Description("Оплата трех товаров (цена < 100)")
     public void testOrderThreeItems() throws InterruptedException {
-        String productName = "Product_" + System.currentTimeMillis();
+        String productName = "PO_Item_31_" + System.currentTimeMillis();
         createdProducts.add(productName);
-
         createProductViaApi(productName, 50.0);
         Thread.sleep(1000);
 
         open(TestConfig.getStandUrl() + "/");
-        refresh();
+        PageAssert.assertMainPageIsLoaded();
 
         MainPage mainPage = new MainPage();
         mainPage.setQuantity(productName, "3");
         mainPage.clickAddToCart(productName);
-
-        Thread.sleep(500);
-
         mainPage.clickOpenCart();
 
-        $("#total-price").shouldBe(com.codeborne.selenide.Condition.visible);
-
         PageAssert.assertTotalPrice("150");
-
         mainPage.clickMakeOrder();
         PageAssert.assertOrderSuccess();
     }
 
-    // 2.2. Несколько разных товаров, проверка суммы
+    // ============================================================
+    // 2.2. Сумма нескольких товаров
+    // ============================================================
     @Test
+    @Description("Проверка суммы нескольких товаров")
     public void testMultipleProductsSum() throws InterruptedException {
-        String p1 = "Product_2" + System.currentTimeMillis();
-        String p2 = "Product_3" + System.currentTimeMillis();
+        String p1 = "PO_Item_32_A_" + System.currentTimeMillis();
+        String p2 = "PO_Item_32_B_" + System.currentTimeMillis();
         createdProducts.add(p1);
         createdProducts.add(p2);
 
@@ -128,7 +117,7 @@ public class PageObjectScenariosTest {
         Thread.sleep(1000);
 
         open(TestConfig.getStandUrl() + "/");
-        refresh();
+        PageAssert.assertMainPageIsLoaded();
 
         MainPage mainPage = new MainPage();
         mainPage.clickAddToCart(p1);
@@ -139,15 +128,19 @@ public class PageObjectScenariosTest {
         PageAssert.assertCartHasItems(2);
     }
 
-
-    // 2.3. Войти в админку и добавить товар
+    // ============================================================
+    // 2.3. Добавление товара в админке (Smoke)
+    // ============================================================
+    @Tag("smoke")
     @Test
+    @Description("Добавление товара в админке и проверка уведомления")
     public void testAddProductInAdmin() {
-        String productName = "Product_4" + System.currentTimeMillis();
+        String productName = "PO_Item_33_" + System.currentTimeMillis();
         createdProducts.add(productName);
 
         loginToAdmin();
         open(TestConfig.getStandUrl() + "/admin");
+        PageAssert.assertAdminPageIsLoaded();
 
         AdminPage adminPage = new AdminPage();
         adminPage.fillProductData(productName, "200");
@@ -156,11 +149,14 @@ public class PageObjectScenariosTest {
         PageAssert.assertToastContains("добавлен");
     }
 
-    // 2.4. Войти в админку и отредактировать товар
+    // ============================================================
+    // 2.4. Редактирование товара (через UI!)
+    // ============================================================
     @Test
+    @Description("Редактирование товара в админке и проверка на витрине")
     public void testEditProduct() throws InterruptedException {
-        String oldName = "Product_Old_" + System.currentTimeMillis();
-        String newName = "Product_New_" + System.currentTimeMillis();
+        String oldName = "PO_Old_34_" + System.currentTimeMillis();
+        String newName = "PO_New_34_" + System.currentTimeMillis();
         createdProducts.add(oldName);
         createdProducts.add(newName);
 
@@ -170,25 +166,18 @@ public class PageObjectScenariosTest {
         loginToAdmin();
         open(TestConfig.getStandUrl() + "/admin");
         refresh();
+        PageAssert.assertAdminPageIsLoaded();
 
+        // Редактируем через UI (метод в AdminPage)
         AdminPage adminPage = new AdminPage();
-        adminPage.table().shouldBe(com.codeborne.selenide.Condition.visible);
-
-        // 1. Клик "Редактировать"
-        adminPage.clickEditById(id);
-
-        // 2. Вводим новые данные в форму
-        adminPage.fillProductData(newName, "100");
-
-        // 3. Сохраняем через API (обернуто в @Step метод updateProductViaApi)
-        updateProductViaApi(id, newName, 100.0);
+        adminPage.editProductInTable(id, newName, "150");
 
         Thread.sleep(1000);
 
-        // 4. Проверяем на витрине
+        // Проверяем на витрине
         open(TestConfig.getStandUrl() + "/");
         refresh();
-        PageAssert.assertProductIsVisible(newName);
-        $(".products-grid").shouldNotHave(com.codeborne.selenide.Condition.text(oldName));
+        PageAssert.assertProductVisibleInGrid(newName);
+        PageAssert.assertProductNotVisibleInGrid(oldName);
     }
 }
